@@ -35,7 +35,7 @@ export function BoardColumn({ meta, tasks, focusedIndex }: BoardColumnProps) {
   return (
     <section
       aria-label={meta.label}
-      className="group/column flex min-h-0 w-56 min-w-56 flex-1 flex-col"
+      className="group/column flex min-h-0 w-56 min-w-56 flex-1 flex-col rounded-lg bg-muted/50 p-2"
     >
       <ColumnHeader
         meta={meta}
@@ -70,20 +70,19 @@ export function BoardColumn({ meta, tasks, focusedIndex }: BoardColumnProps) {
         </SortableContext>
 
         {tasks.length === 0 && !composing && (
-          // One quiet line, not a box: the rule is a hint, and the column keeps
-          // its whole height as a drop target either way. The keyboard cursor can
-          // rest here, and it lifts the surface the way it does on a card.
-          <button
-            type="button"
-            data-focused={focusedIndex !== null}
-            onClick={() => setComposing(true)}
-            className={cn(
-              "mt-0.5 rounded-md px-2 py-2.5 text-center text-xs text-muted-foreground/60 transition-colors duration-100 ease-ui hover:text-muted-foreground",
-              focusedIndex !== null && "bg-accent text-muted-foreground"
-            )}
-          >
-            {meta.hint}
-          </button>
+          <div className="flex flex-1 items-center justify-center">
+            <button
+              type="button"
+              data-focused={focusedIndex !== null}
+              onClick={() => setComposing(true)}
+              className={cn(
+                "rounded-md px-2 py-2.5 text-center text-xs text-muted-foreground/60 transition-colors duration-100 ease-ui hover:text-muted-foreground",
+                focusedIndex !== null && "bg-accent text-muted-foreground"
+              )}
+            >
+              {meta.hint}
+            </button>
+          </div>
         )}
       </div>
     </section>
