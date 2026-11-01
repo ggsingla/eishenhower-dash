@@ -1,0 +1,8 @@
+overrides:
+  minimatch: ">=11.0.1"
+
+auditConfig:
+  ignoreGhsas:
+    # deepmerge <=4.3.1 prototype poisoning (low). No patched release exists;
+    # only pulled in by the shadcn CLI. Remove once deepmerge >=4.3.2 ships.
+    - GHSA-gcqx-w48m-w2h4
