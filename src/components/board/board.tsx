@@ -24,6 +24,7 @@ import { useUiStore } from "@/store/ui-store"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppHeader } from "@/components/app-header"
 import { Overlays } from "@/components/overlays"
+import { ShortcutsButton } from "@/components/shortcuts-button"
 import { BoardColumn } from "@/components/board/board-column"
 import { CompletedRail } from "@/components/board/completed-rail"
 import { TaskCard } from "@/components/board/task-card"
@@ -245,6 +246,7 @@ export function Board() {
         </DndContext>
       </div>
 
+      <ShortcutsButton />
       <Overlays />
     </TooltipProvider>
   )

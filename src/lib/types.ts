@@ -8,6 +8,24 @@ export const QUADRANT_IDS = [
 
 export type QuadrantId = (typeof QUADRANT_IDS)[number]
 
+/** One choice inside a label type — "Acme" under "Client". Tasks reference it by id. */
+export interface LabelOption {
+  id: string
+  name: string
+}
+
+/** A user-defined selector, e.g. "Client", offered in the task editor. */
+export interface LabelType {
+  id: string
+  name: string
+  /** Multi-select types may hold several options per task; single holds at most one. */
+  multiple: boolean
+  options: LabelOption[]
+}
+
+/** Label type id → the option ids chosen for it, in the order they were picked. */
+export type TaskLabels = Record<string, string[]>
+
 export interface Task {
   id: string
   /** Sequential, board-wide, shown as `#12`. Gives every card the same anchor. */
@@ -15,6 +33,8 @@ export interface Task {
   title: string
   notes: string
   tags: string[]
+  /** Absent on tasks saved before label types existed; the store fills in `{}`. */
+  labels: TaskLabels
   quadrant: QuadrantId
   createdAt: number
   updatedAt: number
@@ -24,7 +44,7 @@ export interface Task {
 }
 
 /** The editable surface of a task — what the create/edit dialog produces. */
-export type TaskDraft = Pick<Task, "title" | "notes" | "tags">
+export type TaskDraft = Pick<Task, "title" | "notes" | "tags" | "labels">
 
 export function isQuadrantId(value: string): value is QuadrantId {
   return (QUADRANT_IDS as readonly string[]).includes(value)

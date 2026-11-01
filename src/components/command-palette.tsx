@@ -10,12 +10,14 @@ import {
   PanelRightOpenIcon,
   PencilIcon,
   PlusIcon,
+  SettingsIcon,
   SunIcon,
   TrashIcon,
 } from "lucide-react"
 import { cn } from "cn"
 import { QUADRANTS, QUADRANT_BY_ID, WORKING_QUADRANTS, type QuadrantMeta } from "@/lib/quadrants"
 import { chord } from "@/lib/platform"
+import { openSettings } from "@/lib/route"
 import { deleteTaskWithUndo, moveTaskTo, toggleComplete } from "@/lib/task-actions"
 import { useFocusedTask } from "@/hooks/use-focused-task"
 import { useUiStore } from "@/store/ui-store"
@@ -216,6 +218,14 @@ export function CommandPalette() {
                 <CommandItem value="theme system" onSelect={() => run(() => setTheme("system"))}>
                   <MonitorIcon />
                   System theme
+                </CommandItem>
+                <CommandItem
+                  value="settings preferences labels configure"
+                  onSelect={() => run(() => openSettings())}
+                >
+                  <SettingsIcon />
+                  Settings
+                  <CommandShortcut>{chord(",")}</CommandShortcut>
                 </CommandItem>
                 <CommandItem
                   value="keyboard shortcuts help"

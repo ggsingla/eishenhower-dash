@@ -3,7 +3,9 @@ import { ChevronDownIcon } from "lucide-react"
 import { cn } from "cn"
 import { QUADRANTS, QUADRANT_BY_ID } from "@/lib/quadrants"
 import { isQuadrantId, type QuadrantId, type Task, type TaskDraft } from "@/lib/types"
+import { withPick } from "@/lib/labels"
 import { useBoardStore } from "@/store/board-store"
+import { useSettingsStore } from "@/store/settings-store"
 import { useUiStore } from "@/store/ui-store"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { LabelPicker } from "@/components/board/label-picker"
 import { TagEditor } from "@/components/board/tag-editor"
 
 /** Create / edit dialog. Reads its subject straight off the UI store. */
@@ -85,9 +88,10 @@ interface TaskFormProps {
 function TaskForm({ task, quadrant, onCancel, onSubmit }: TaskFormProps) {
   const [draft, setDraft] = useState<TaskDraft>(() =>
     task
-      ? { title: task.title, notes: task.notes, tags: task.tags }
-      : { title: "", notes: "", tags: [] }
+      ? { title: task.title, notes: task.notes, tags: task.tags, labels: task.labels }
+      : { title: "", notes: "", tags: [], labels: {} }
   )
+  const labelTypes = useSettingsStore((state) => state.labelTypes)
   const [target, setTarget] = useState<QuadrantId>(task?.quadrant ?? quadrant)
   const canSubmit = draft.title.trim() !== ""
 
@@ -146,6 +150,22 @@ function TaskForm({ task, quadrant, onCancel, onSubmit }: TaskFormProps) {
       {/* Properties row: one pill per property, the way Linear's composer does status. */}
       <div className="flex flex-wrap items-center gap-2">
         <ColumnPicker value={target} onChange={setTarget} />
+        {/* A type with no options has nothing to pick, so it stays out of the way. */}
+        {labelTypes
+          .filter((type) => type.options.length > 0)
+          .map((type) => (
+            <LabelPicker
+              key={type.id}
+              type={type}
+              value={draft.labels[type.id] ?? []}
+              onPick={(optionId) =>
+                setDraft((current) => ({
+                  ...current,
+                  labels: withPick(current.labels, type, optionId),
+                }))
+              }
+            />
+          ))}
       </div>
 
       <DialogFooter>

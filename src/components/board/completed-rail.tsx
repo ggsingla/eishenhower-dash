@@ -93,7 +93,14 @@ export function CompletedRail({ tasks, focusedIndex }: CompletedRailProps) {
             </SortableContext>
 
             {tasks.length === 0 && (
-              <p className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border/70 p-4 text-center text-xs text-muted-foreground/70">
+              <p
+                data-focused={focusedIndex !== null}
+                className={cn(
+                  "flex flex-1 items-center justify-center rounded-md border border-dashed border-border/70 p-4 text-center text-xs text-muted-foreground/70",
+                  "transition-colors duration-100 ease-ui",
+                  focusedIndex !== null && "bg-accent text-muted-foreground"
+                )}
+              >
                 Nothing finished yet.
               </p>
             )}
@@ -108,7 +115,7 @@ export function CompletedRail({ tasks, focusedIndex }: CompletedRailProps) {
               aria-label={`Show Completed, ${tasks.length} tasks`}
               className="group/rail flex min-h-0 flex-1 flex-col items-center gap-2 rounded-lg py-2 text-muted-foreground transition-colors duration-100 ease-ui hover:bg-accent/50 hover:text-foreground"
             >
-              <ChevronsLeftIcon className="size-3.5 shrink-0 opacity-0 transition-opacity duration-100 ease-ui group-hover/rail:opacity-100" />
+              <ChevronsLeftIcon className="size-3.5 shrink-0" />
               <META.icon className={cn("size-3.5 shrink-0", META.text)} />
               <span className="text-xs font-medium tabular-nums">{tasks.length}</span>
               <span className="mt-1 [writing-mode:vertical-rl] text-xs font-medium tracking-wide">

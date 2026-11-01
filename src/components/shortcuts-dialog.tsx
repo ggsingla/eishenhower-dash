@@ -20,8 +20,9 @@ const SECTIONS: { heading: string; shortcuts: Shortcut[] }[] = [
     shortcuts: [
       { keys: ["C"], label: "New task" },
       { keys: [`${MOD_KEY}K`], label: "Command palette" },
+      { keys: [chord(",")], label: "Settings" },
       { keys: ["?"], label: "This cheatsheet" },
-      { keys: ["Esc"], label: "Close overlay / clear focus" },
+      { keys: ["Esc"], label: "Close overlay / clear focus / leave Settings" },
     ],
   },
   {

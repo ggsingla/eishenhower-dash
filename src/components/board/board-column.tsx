@@ -71,11 +71,16 @@ export function BoardColumn({ meta, tasks, focusedIndex }: BoardColumnProps) {
 
         {tasks.length === 0 && !composing && (
           // One quiet line, not a box: the rule is a hint, and the column keeps
-          // its whole height as a drop target either way.
+          // its whole height as a drop target either way. The keyboard cursor can
+          // rest here, and it lifts the surface the way it does on a card.
           <button
             type="button"
+            data-focused={focusedIndex !== null}
             onClick={() => setComposing(true)}
-            className="mt-0.5 rounded-md px-2 py-2.5 text-center text-xs text-muted-foreground/60 transition-colors duration-100 ease-ui hover:text-muted-foreground"
+            className={cn(
+              "mt-0.5 rounded-md px-2 py-2.5 text-center text-xs text-muted-foreground/60 transition-colors duration-100 ease-ui hover:text-muted-foreground",
+              focusedIndex !== null && "bg-accent text-muted-foreground"
+            )}
           >
             {meta.hint}
           </button>
@@ -158,7 +163,7 @@ function Composer({ quadrant, onClose }: { quadrant: QuadrantId; onClose: () => 
         return
       }
 
-      addTask({ title: value, notes: "", tags: [] }, quadrant)
+      addTask({ title: value, notes: "", tags: [], labels: {} }, quadrant)
       setValue("")
     }
   }

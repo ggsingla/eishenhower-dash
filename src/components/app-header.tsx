@@ -1,11 +1,6 @@
-import {
-  PanelRightCloseIcon,
-  PanelRightOpenIcon,
-  PlusIcon,
-  SearchIcon,
-} from "lucide-react"
-import { cn } from "cn"
-import { MOD_KEY } from "@/lib/platform"
+import { PlusIcon, SearchIcon, SettingsIcon } from "lucide-react"
+import { chord, MOD_KEY } from "@/lib/platform"
+import { openSettings } from "@/lib/route"
 import { WORKING_QUADRANTS } from "@/lib/quadrants"
 import { useBoardStore } from "@/store/board-store"
 import { useUiStore } from "@/store/ui-store"
@@ -17,8 +12,6 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 export function AppHeader() {
   const columns = useBoardStore((state) => state.columns)
-  const completedOpen = useUiStore((state) => state.completedOpen)
-  const toggleCompleted = useUiStore((state) => state.toggleCompleted)
   const openPalette = useUiStore((state) => state.openPalette)
   const openEditor = useUiStore((state) => state.openEditor)
 
@@ -60,25 +53,23 @@ export function AppHeader() {
           <Kbd className="ml-1">{MOD_KEY}K</Kbd>
         </Button>
 
+        <ThemeToggle />
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-pressed={completedOpen}
-              aria-label={completedOpen ? "Hide Completed" : "Show Completed"}
-              onClick={toggleCompleted}
-              className={cn(completedOpen && "bg-muted text-foreground")}
+              aria-label="Settings"
+              onClick={() => openSettings()}
             >
-              {completedOpen ? <PanelRightCloseIcon /> : <PanelRightOpenIcon />}
+              <SettingsIcon />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {completedOpen ? "Hide" : "Show"} Completed <Kbd>⇧C</Kbd>
+            Settings <Kbd>{chord(",")}</Kbd>
           </TooltipContent>
         </Tooltip>
-
-        <ThemeToggle />
 
         <Button size="sm" onClick={() => openEditor({ quadrant: "do" })} className="pr-1.5">
           <PlusIcon />

@@ -127,23 +127,24 @@ try {
   const React = await import("react")
   const { act } = React
   const { createRoot } = await import("react-dom/client")
-  const { Board } = await server.ssrLoadModule("/src/components/board/board.tsx")
+  const { default: App } = await server.ssrLoadModule("/src/App.tsx")
   const { useBoardStore } = await server.ssrLoadModule("/src/store/board-store.ts")
   const { useUiStore } = await server.ssrLoadModule("/src/store/ui-store.ts")
+  const { useSettingsStore } = await server.ssrLoadModule("/src/store/settings-store.ts")
 
   const container = document.getElementById("root")
   const root = createRoot(container)
 
   await act(async () => {
-    root.render(React.createElement(Board))
+    root.render(React.createElement(App))
   })
   check("board mounts", container.textContent.includes("Do"), container.innerHTML.slice(0, 200))
 
   // Seed two tasks through the store, the same call the composer makes. New
   // tasks land on top, so Do reads [Second smoke task, Smoke task].
   await act(async () => {
-    useBoardStore.getState().addTask({ title: "Smoke task", notes: "", tags: ["x"] }, "do")
-    useBoardStore.getState().addTask({ title: "Second smoke task", notes: "", tags: [] }, "do")
+    useBoardStore.getState().addTask({ title: "Smoke task", notes: "", tags: ["x"], labels: {} }, "do")
+    useBoardStore.getState().addTask({ title: "Second smoke task", notes: "", tags: [], labels: {} }, "do")
   })
   check("task renders", container.textContent.includes("Smoke task"))
   const [secondId, smokeId] = useBoardStore.getState().columns.do
@@ -299,6 +300,127 @@ try {
     "⌘⌫ deletes the focused task",
     useBoardStore.getState().tasks[completedId] === undefined
   )
+
+
+  // ── Settings: label types ───────────────────────────────────────────────
+  const setValue = Object.getOwnPropertyDescriptor(
+    dom.window.HTMLInputElement.prototype,
+    "value"
+  ).set
+  const byLabel = (label) => container.querySelector(`[aria-label="${label}"]`)
+  const buttonWithText = (scope, text) =>
+    [...scope.querySelectorAll("button")].find((button) => button.textContent.trim() === text)
+  const click = (node) =>
+    act(async () => {
+      node?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, cancelable: true }))
+    })
+  /** Types into an input the way a person would, then submits its form. */
+  const enter = (input, value) =>
+    act(async () => {
+      setValue.call(input, value)
+      input.dispatchEvent(new dom.window.Event("input", { bubbles: true }))
+      input.form?.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }))
+    })
+
+  const secondTaskId = useBoardStore.getState().columns.do[0]
+
+  await press(",", { metaKey: true })
+  check(
+    "⌘, opens Settings",
+    window.location.hash === "#/settings/labels" && (await settle(bodyHas("No label types yet"))),
+    window.location.hash
+  )
+
+  await click(buttonWithText(container, "Add label type"))
+  await enter(byLabel("New label type name"), "Client")
+  const [clientType] = useSettingsStore.getState().labelTypes
+  check(
+    "a label type is created single-select",
+    clientType?.name === "Client" && clientType.multiple === false,
+    JSON.stringify(useSettingsStore.getState().labelTypes)
+  )
+  check(
+    "a duplicate type name is refused ignoring case",
+    useSettingsStore.getState().addLabelType("client").ok === false
+  )
+
+  await enter(byLabel("Add option to Client"), "Acme")
+  await enter(byLabel("Add option to Client"), "Globex")
+  await enter(byLabel("Add option to Client"), "acme")
+  const options = () => useSettingsStore.getState().labelTypes[0].options
+  check(
+    "options are added in order and duplicates refused",
+    options().map((option) => option.name).join() === "Acme,Globex" &&
+      container.textContent.includes("already exists"),
+    JSON.stringify(options())
+  )
+
+  await click(buttonWithText(container, "Multiple"))
+  check("the mode toggles to multiple", useSettingsStore.getState().labelTypes[0].multiple === true)
+
+  const [acme, globex] = options()
+  await act(async () => {
+    useBoardStore.getState().updateTask(secondTaskId, {
+      labels: { [clientType.id]: [acme.id, globex.id] },
+    })
+  })
+  check("an option on a task shows its task count", container.textContent.includes("1 task"))
+
+  await click(byLabel("Remove option Acme"))
+  const dialog = () => document.querySelector('[role="alertdialog"]')
+  check(
+    "removing a used option asks first, with the count",
+    (await settle(() => dialog() !== null)) && dialog().textContent.includes("set on 1 task"),
+    dialog()?.textContent
+  )
+  await click(buttonWithText(dialog(), "Remove"))
+  check(
+    "confirming strips the option from tasks",
+    options().length === 1 &&
+      useBoardStore.getState().tasks[secondTaskId].labels[clientType.id]?.join() === globex.id,
+    JSON.stringify(useBoardStore.getState().tasks[secondTaskId].labels)
+  )
+
+  // Switching to single-select trims a task that holds several picks.
+  let initech
+  await act(async () => {
+    initech = useSettingsStore.getState().addOption(clientType.id, "Initech")
+    useBoardStore.getState().updateTask(secondTaskId, {
+      labels: { [clientType.id]: [globex.id, initech.id] },
+    })
+  })
+  await click(buttonWithText(container, "Single"))
+  check(
+    "multi → single asks first when picks would be lost",
+    (await settle(() => dialog() !== null)) && dialog().textContent.includes("more than one value"),
+    dialog()?.textContent
+  )
+  await click(buttonWithText(dialog(), "Make single-select"))
+  check(
+    "confirming keeps each task's first pick",
+    useSettingsStore.getState().labelTypes[0].multiple === false &&
+      useBoardStore.getState().tasks[secondTaskId].labels[clientType.id]?.join() === globex.id,
+    JSON.stringify(useBoardStore.getState().tasks[secondTaskId].labels)
+  )
+
+  await press("Escape")
+  check(
+    "Esc leaves Settings for the board",
+    window.location.hash === "" && (await settle(bodyHas("Eliminate"))),
+    window.location.hash
+  )
+  check(
+    "the card shows the label chip",
+    container.querySelector('[title="Client"]')?.textContent === "Globex",
+    container.querySelector('[title="Client"]')?.outerHTML
+  )
+
+  await act(async () => useUiStore.getState().openEditor({ taskId: secondTaskId, quadrant: "do" }))
+  check(
+    "the editor offers a picker for the label type",
+    await settle(() => document.querySelector('[aria-label="Client: Globex"]') !== null)
+  )
+  await act(async () => useUiStore.getState().setEditorOpen(false))
 
   await act(async () => root.unmount())
 

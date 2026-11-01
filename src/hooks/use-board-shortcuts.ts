@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { COLUMN_ORDER } from "@/lib/quadrants"
+import { openSettings } from "@/lib/route"
 import {
   deleteTaskWithUndo,
   moveTaskTo,
@@ -56,6 +57,13 @@ export function useBoardShortcuts() {
       }
 
       if (isOverlayOpen(ui)) return
+
+      // ⌘, — the platform convention for preferences. Fine from inside a field too.
+      if (mod && event.key === ",") {
+        event.preventDefault()
+        openSettings()
+        return
+      }
 
       if (target?.closest(FIELD_SELECTOR)) {
         // Escape hands the keyboard back to the board.

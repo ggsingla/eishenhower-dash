@@ -2,13 +2,14 @@ import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 
 import { useDndContext } from "@dnd-kit/core"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { AlignLeftIcon, CheckIcon, EllipsisIcon, PencilIcon, TrashIcon } from "lucide-react"
+import { CheckIcon, EllipsisIcon, PencilIcon, TrashIcon } from "lucide-react"
 import { cn } from "cn"
 import { formatRelativeTime, formatShortAge } from "@/lib/format"
 import { chord } from "@/lib/platform"
 import { QUADRANTS, QUADRANT_BY_ID } from "@/lib/quadrants"
 import { deleteTaskWithUndo, moveTaskTo, toggleComplete } from "@/lib/task-actions"
 import type { Task } from "@/lib/types"
+import { useSettingsStore } from "@/store/settings-store"
 import { useUiStore } from "@/store/ui-store"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,12 +37,19 @@ function stopDoubleClick(event: MouseEvent) {
 
 /**
  * Presentational card. Also what the drag overlay renders, so it holds no drag
- * state. Every card has the same two rows — title, then identifier and meta —
- * so a column reads as one rhythm whatever the tasks contain.
+ * state. A card is its title, an optional two-line preview of the notes, then
+ * the identifier and meta row, so what a task says is visible without opening it.
  */
 export function TaskCard({ task, focused, dragging, grabbable, onMenuOpenChange }: TaskCardProps) {
   const meta = QUADRANT_BY_ID[task.quadrant]
   const isComplete = task.quadrant === "completed"
+  const labelTypes = useSettingsStore((state) => state.labelTypes)
+  const chips = labelTypes.flatMap((type) =>
+    (task.labels[type.id] ?? []).flatMap((optionId) => {
+      const option = type.options.find((candidate) => candidate.id === optionId)
+      return option ? [{ key: option.id, type: type.name, name: option.name }] : []
+    })
+  )
   const stamp = isComplete && task.completedAt ? task.completedAt : task.createdAt
 
   return (
@@ -138,6 +146,12 @@ export function TaskCard({ task, focused, dragging, grabbable, onMenuOpenChange 
         </DropdownMenu>
       </div>
 
+      {task.notes && (
+        <p className="line-clamp-2 pl-6 text-xs leading-snug [text-wrap:pretty] break-words text-muted-foreground">
+          {task.notes}
+        </p>
+      )}
+
       <div className="flex min-w-0 items-center gap-1.5 pl-6 text-[0.6875rem] leading-4 text-muted-foreground">
         <span className="tabular-nums text-muted-foreground/70">#{task.number}</span>
         <time
@@ -147,8 +161,18 @@ export function TaskCard({ task, focused, dragging, grabbable, onMenuOpenChange 
         >
           {formatShortAge(stamp)}
         </time>
-        {task.notes && (
-          <AlignLeftIcon aria-label="Has notes" className="size-3 text-muted-foreground/70" />
+        {chips.length > 0 && (
+          <span className="flex min-w-0 flex-wrap items-center gap-1">
+            {chips.map((chip) => (
+              <span
+                key={chip.key}
+                title={chip.type}
+                className="rounded-sm bg-secondary px-1 leading-4 text-secondary-foreground"
+              >
+                {chip.name}
+              </span>
+            ))}
+          </span>
         )}
         {task.tags.length > 0 && (
           <span className="flex min-w-0 flex-wrap items-center gap-1">

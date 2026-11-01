@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { emptyColumns, insertAt, withoutId, type Columns } from "@/lib/columns"
-import type { QuadrantId, Task, TaskDraft } from "@/lib/types"
+import type { QuadrantId, Task, TaskDraft, TaskLabels } from "@/lib/types"
 
 const STORAGE_KEY = "eisenhower-dash:board"
 
@@ -19,6 +19,20 @@ export interface BoardState {
   moveTask: (id: string, to: QuadrantId, toIndex?: number) => void
   reorderTask: (column: QuadrantId, fromIndex: number, toIndex: number) => void
   clearColumn: (column: QuadrantId) => void
+  /**
+   * Rewrites every task's labels through `change`. Returning the same object
+   * leaves that task untouched, so only tasks that actually differ re-render.
+   */
+  mapTaskLabels: (change: (labels: TaskLabels) => TaskLabels) => void
+}
+
+/** Boards saved before label types existed carry no `labels`; every task gets an empty set. */
+function withLabels(tasks: Record<string, Task>) {
+  const filled: Record<string, Task> = {}
+  for (const [id, task] of Object.entries(tasks)) {
+    filled[id] = task.labels ? task : { ...task, labels: {} }
+  }
+  return filled
 }
 
 /** Boards saved before identifiers existed get them in creation order. */
@@ -50,6 +64,7 @@ export const useBoardStore = create<BoardState>()(
           title: draft.title.trim(),
           notes: draft.notes.trim(),
           tags: draft.tags,
+          labels: draft.labels,
           quadrant,
           createdAt: now,
           updatedAt: now,
@@ -164,28 +179,44 @@ export const useBoardStore = create<BoardState>()(
           return { tasks, columns: { ...state.columns, [column]: [] } }
         })
       },
+
+      mapTaskLabels: (change) => {
+        set((state) => {
+          let changed = false
+          const tasks: Record<string, Task> = {}
+          for (const [id, task] of Object.entries(state.tasks)) {
+            const labels = change(task.labels)
+            changed ||= labels !== task.labels
+            tasks[id] = labels === task.labels ? task : { ...task, labels }
+          }
+          return changed ? { tasks } : state
+        })
+      },
     }),
     {
       name: STORAGE_KEY,
-      version: 2,
+      version: 3,
       // Actions live on the same object as the data; only the data is persisted.
       partialize: (state) => ({
         tasks: state.tasks,
         columns: state.columns,
         nextNumber: state.nextNumber,
       }),
-      // v2 added `Task.number`. Older boards are numbered in creation order.
+      // v2 added `Task.number`, v3 `Task.labels`. Older boards are brought forward.
       migrate: (persisted, version) => {
         const saved = persisted as Partial<Pick<BoardState, "tasks" | "columns" | "nextNumber">>
-        if (version < 2) return { ...saved, ...numberTasks(saved.tasks ?? {}) }
-        return saved
+        if (version < 2) return { ...saved, ...numberTasks(withLabels(saved.tasks ?? {})) }
+        return { ...saved, tasks: withLabels(saved.tasks ?? {}) }
       },
       merge: (persisted, current) => {
         const saved = persisted as
           | Partial<Pick<BoardState, "tasks" | "columns" | "nextNumber">>
           | undefined
         // Number defensively too: a payload that skipped migration must not crash a card.
-        const { tasks, nextNumber } = numberTasks(saved?.tasks ?? {}, saved?.nextNumber ?? 1)
+        const { tasks, nextNumber } = numberTasks(
+          withLabels(saved?.tasks ?? {}),
+          saved?.nextNumber ?? 1
+        )
         return {
           ...current,
           tasks,
